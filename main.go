@@ -55,6 +55,25 @@ func main() {
 			switch p[0] {
 			// empty path - create a new game
 			case "":
+				// read the contents of POST
+				err := r.ParseForm()
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					fmt.Fprintf(w, err.Error())
+					return
+				}
+				width, err := strconv.ParseUint(r.Form.Get("w"), 10, 16)
+				if err != nil {
+					width = 12
+				}
+				height, err := strconv.ParseUint(r.Form.Get("h"), 10, 16)
+				if err != nil {
+					height = 12
+				}
+				mines, err := strconv.ParseUint(r.Form.Get("m"), 10, 16)
+				if err != nil {
+					mines = 20
+				}
 				// generate a new uuid
 				uuid, err := uuid.NewUUID()
 				if err != nil {
@@ -63,7 +82,7 @@ func main() {
 					return
 				}
 				// generate a new game
-				game, err := game.NewGame(uuid, 12, 12, 20)
+				game, err := game.NewGame(uuid, uint16(width), uint16(height), uint16(mines))
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprintf(w, err.Error())
