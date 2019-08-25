@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -24,8 +25,9 @@ type Game struct {
 	boardHeight uint16    // height, in tiles
 	flags       uint16    // how many flags are set
 	active      bool      // minefield is active
-	won         bool      // game was won
 	grid        []tile    // master grid
+	startTime   time.Time // time game started
+	endTime     time.Time // time game ended
 }
 
 // NewGame starts a new game
@@ -40,6 +42,7 @@ func NewGame(uid uuid.UUID, w, h, m uint16) (g *Game, err error) {
 		boardHeight: h,
 		boardWidth:  w,
 		totalMines:  m,
+		startTime:   time.Now(),
 	}
 
 	return g, nil
@@ -120,7 +123,7 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 		if total == len(g.grid) {
 			fmt.Println("YOU WIN")
 			g.active = false
-			g.won = true
+			g.endTime = time.Now()
 		}
 	}
 	return
@@ -129,12 +132,16 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 // Pretty print the board to a bytes buffer
 func (g *Game) Pretty() bytes.Buffer {
 	var b bytes.Buffer
+	b.WriteString(fmt.Sprintf("Game Started: %v\n", g.startTime))
+	if !g.endTime.IsZero() {
+		b.WriteString(fmt.Sprintf("Game Ended: %v\n", g.endTime))
+	}
 	if 0 == len(g.grid) {
 		return b
 	}
+	b.WriteString("  ")
 	w := int(g.boardWidth)
 	h := int(g.boardHeight)
-	b.WriteString("  ")
 	for i := 0; i < w; i++ {
 		if 10 > i {
 			b.WriteString(" ")
