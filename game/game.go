@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -23,7 +24,6 @@ type Game struct {
 	boardWidth  uint16    // width, in tiles
 	boardHeight uint16    // height, in tiles
 	flags       uint16    // how many flags are set
-	active      bool      // minefield is active
 	grid        []tile    // master grid
 	startTime   time.Time // time game started
 	endTime     time.Time // time game ended
@@ -60,10 +60,9 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 	// add mines, if not already added
 	if 0 == len(g.grid) {
 		g.addMinesToGrid(x, y)
-		g.active = true
 	}
-	// bail if game is not active
-	if !g.active {
+	// bail if game was lost
+	if !g.endTime.IsZero() {
 		return errors.New("Game is not active")
 	}
 	// get tile
@@ -82,7 +81,7 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 		} else { // click tile
 			tile.clicked = true
 			if 9 == tile.value { // tile is a mine - game over!
-				g.active = false
+				g.endTime = time.Now()
 			} else if 0 == tile.value { // tile has 0 neighboring mines - open neighbors too
 				g.clickNeighbors(x, y)
 			}
@@ -92,7 +91,7 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 		g.flags--
 	}
 	// check win condition
-	if g.active {
+	if g.endTime.IsZero() {
 		var total int
 		for i := 0; i < len(g.grid); i++ {
 			if g.grid[i].clicked || (9 == g.grid[i].value) {
@@ -100,15 +99,14 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 			}
 		}
 		if total == len(g.grid) {
-			g.active = false
 			g.endTime = time.Now()
 		}
 	}
 	return
 }
 
-// Pretty print the board to a bytes buffer
-func (g *Game) Pretty() bytes.Buffer {
+// String writes the board state to a string
+func (g *Game) String() string {
 	var b bytes.Buffer
 	// show the start time
 	b.WriteString(fmt.Sprintf("Game Started: %v\n", g.startTime))
@@ -118,7 +116,7 @@ func (g *Game) Pretty() bytes.Buffer {
 	}
 	// no turns taken yet
 	if 0 == len(g.grid) {
-		return b
+		return b.String()
 	}
 	// start the table with some padding
 	b.WriteString("  ")
@@ -159,7 +157,39 @@ func (g *Game) Pretty() bytes.Buffer {
 			}
 		}
 	}
-	return b
+	return b.String()
+}
+
+// JSON writes the board state to a JSON string
+func (g *Game) JSON() string {
+	obj := make(map[string]interface{})
+	obj["start"] = g.startTime
+	obj["mines"] = g.totalMines
+	obj["height"] = g.boardHeight
+	obj["width"] = g.boardWidth
+	if !g.endTime.IsZero() {
+		obj["end"] = g.endTime
+	}
+	grid := make([]string, g.boardHeight*g.boardWidth)
+	for i := 0; i < len(g.grid); i++ {
+		var val string
+		if g.grid[i].flagged {
+			val = "!"
+		} else if !g.grid[i].clicked {
+			val = "?"
+		} else if 0 == g.grid[i].value {
+			val = ""
+		} else {
+			val = fmt.Sprintf("%d", g.grid[i].value)
+		}
+		grid[i] = val
+	}
+	obj["grid"] = grid
+	json, err := json.Marshal(obj)
+	if err != nil {
+		return err.Error()
+	}
+	return string(json)
 }
 
 // addMinesToGrid generates the initial mine grid

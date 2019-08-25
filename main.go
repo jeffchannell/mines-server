@@ -47,8 +47,9 @@ func main() {
 					fmt.Fprintf(w, err.Error())
 					return
 				}
-				s := game.Pretty()
-				fmt.Fprintf(w, s.String())
+				w.Header().Set("Content-Type", "application/json")
+				s := game.JSON()
+				fmt.Fprintf(w, s)
 				return
 			}
 		case `POST`:
@@ -148,10 +149,10 @@ func main() {
 					return
 				}
 
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusAccepted)
-
-				s := game.Pretty()
-				fmt.Fprintf(w, s.String())
+				s := game.JSON()
+				fmt.Fprintf(w, s)
 				return
 			}
 		default:
