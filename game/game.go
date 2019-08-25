@@ -71,44 +71,25 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 	// get tile
 	tile := &g.grid[g.boardWidth*y+x]
 
-	if tile.clicked {
-		// tile is already clicked
-		fmt.Println("Tile is already clicked")
-		if !flag {
-			// not toggling flags, click neighbors
-			fmt.Println("Tile is not flagged")
+	if tile.clicked { // tile is already clicked
+		if !flag { // not toggling flags, click neighbors
 			if f := g.countFlags(x, y); f == tile.value {
-				fmt.Println("Opening neighbors")
 				g.clickNeighbors(x, y)
 			}
 		}
-	} else if !tile.flagged {
-		fmt.Println("Tile is not flagged")
-		// tile is not flagged
-		if flag {
-			fmt.Println("Flagging tile")
-			// toggle flag
+	} else if !tile.flagged { // tile is not flagged
+		if flag { // toggle flag
 			tile.flagged = true
 			g.flags++
-		} else {
-			fmt.Println("Clicking tile")
-			// click tile
+		} else { // click tile
 			tile.clicked = true
-			if 9 == tile.value {
-				// tile is a mine - game over!
-				fmt.Println("GAME OVER")
+			if 9 == tile.value { // tile is a mine - game over!
 				g.active = false
-			} else if 0 == tile.value {
-				fmt.Println("Empty, opening neighbors")
-				// tile has 0 neighboring mines - open neighbors too
+			} else if 0 == tile.value { // tile has 0 neighboring mines - open neighbors too
 				g.clickNeighbors(x, y)
-			} else {
-				fmt.Println("Tile clicked")
 			}
 		}
-	} else if tile.flagged && flag {
-		fmt.Println("Removing flag")
-		// tile is flagged and we are turning off the flag
+	} else if tile.flagged && flag { // tile is flagged and we are turning off the flag
 		tile.flagged = false
 		g.flags--
 	}
@@ -121,7 +102,6 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 			}
 		}
 		if total == len(g.grid) {
-			fmt.Println("YOU WIN")
 			g.active = false
 			g.endTime = time.Now()
 		}
@@ -132,24 +112,32 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 // Pretty print the board to a bytes buffer
 func (g *Game) Pretty() bytes.Buffer {
 	var b bytes.Buffer
+	// show the start time
 	b.WriteString(fmt.Sprintf("Game Started: %v\n", g.startTime))
+	// show the end time
 	if !g.endTime.IsZero() {
 		b.WriteString(fmt.Sprintf("Game Ended: %v\n", g.endTime))
 	}
+	// no turns taken yet
 	if 0 == len(g.grid) {
 		return b
 	}
+	// start the table with some padding
 	b.WriteString("  ")
+	// init
+	var r int
 	w := int(g.boardWidth)
 	h := int(g.boardHeight)
+	// write out the table header
 	for i := 0; i < w; i++ {
 		if 10 > i {
 			b.WriteString(" ")
 		}
 		b.WriteString(fmt.Sprintf("%d", i))
 	}
-	var r int
+	// start the first row number
 	b.WriteString("\n 0 ")
+	// loop the rows
 	for i := 0; i < len(g.grid); i++ {
 		if g.grid[i].flagged {
 			b.WriteString("!")
@@ -160,7 +148,8 @@ func (g *Game) Pretty() bytes.Buffer {
 		} else {
 			b.WriteString(fmt.Sprintf("%d", g.grid[i].value))
 		}
-		b.WriteString(" ")
+		b.WriteString(" ") // spacer
+		// add newline and next row number
 		if 0 == ((i + 1) % w) {
 			b.WriteString("\n")
 			r++
@@ -175,6 +164,7 @@ func (g *Game) Pretty() bytes.Buffer {
 	return b
 }
 
+// addMinesToGrid generates the initial mine grid
 func (g *Game) addMinesToGrid(ignoreX, ignoreY uint16) {
 	g.grid = make([]tile, g.boardHeight*g.boardWidth)
 	g.mines = 0
@@ -191,6 +181,7 @@ func (g *Game) addMinesToGrid(ignoreX, ignoreY uint16) {
 	g.numberGrid()
 }
 
+// clickNeighbors allows an event to spread across a field of tiles
 func (g *Game) clickNeighbors(x, y uint16) {
 	var h, w int
 	h = int(g.boardHeight)
@@ -217,6 +208,7 @@ func (g *Game) clickNeighbors(x, y uint16) {
 	}
 }
 
+// countFlags around a tile
 func (g *Game) countFlags(x, y uint16) (total uint8) {
 	var h, w int
 	h = int(g.boardHeight)
@@ -242,6 +234,7 @@ func (g *Game) countFlags(x, y uint16) (total uint8) {
 	return total
 }
 
+// countMines around a tile
 func (g *Game) countMines(x, y uint16) (total uint8) {
 	var h, w int
 	h = int(g.boardHeight)
@@ -267,6 +260,7 @@ func (g *Game) countMines(x, y uint16) (total uint8) {
 	return total
 }
 
+// numberGrid sets grid values from 1-8
 func (g *Game) numberGrid() {
 	var h, w int
 	h = int(g.boardHeight)
@@ -304,6 +298,7 @@ func (g *Game) numberGrid() {
 	}
 }
 
+// setGridValue returns true if the new value does not equal the old value
 func (g *Game) setGridValue(value uint8, x, y uint16) (set bool) {
 	w := g.boardWidth
 	if g.grid[w*y+x].value != value {
