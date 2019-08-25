@@ -9,9 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type gameState struct {
-}
-
 type tile struct {
 	value   uint8
 	flagged bool
@@ -20,30 +17,15 @@ type tile struct {
 
 // Game represents a single mines game being played
 type Game struct {
-	// game uuid
-	uid uuid.UUID
-	// number of mines that should be on the board
-	totalMines uint16
-	// number of mines currently on the board
-	mines uint16
-	// width, in tiles
-	boardWidth uint16
-	// height, in tiles
-	boardHeight uint16
-	// are we setting flags right now?
-	setFlags bool
-	// how many flags are set
-	flags uint16
-	// minefield is active
-	active bool
-	// game was won
-	won bool
-	// game timer
-	//timer bool
-	// master grid
-	grid []tile
-	// game history
-	history []gameState
+	uid         uuid.UUID // game uuid
+	totalMines  uint16    // number of mines that should be on the board
+	mines       uint16    // number of mines currently on the board
+	boardWidth  uint16    // width, in tiles
+	boardHeight uint16    // height, in tiles
+	flags       uint16    // how many flags are set
+	active      bool      // minefield is active
+	won         bool      // game was won
+	grid        []tile    // master grid
 }
 
 // NewGame starts a new game
@@ -147,6 +129,9 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 // Pretty print the board to a bytes buffer
 func (g *Game) Pretty() bytes.Buffer {
 	var b bytes.Buffer
+	if 0 == len(g.grid) {
+		return b
+	}
 	w := int(g.boardWidth)
 	h := int(g.boardHeight)
 	b.WriteString("  ")
@@ -181,10 +166,6 @@ func (g *Game) Pretty() bytes.Buffer {
 		}
 	}
 	return b
-}
-
-func (g *Game) addHistoryState() {
-	// @todo
 }
 
 func (g *Game) addMinesToGrid(ignoreX, ignoreY uint16) {
