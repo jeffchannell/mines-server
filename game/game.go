@@ -20,7 +20,6 @@ type tile struct {
 type Game struct {
 	uid         uuid.UUID // game uuid
 	totalMines  uint16    // number of mines that should be on the board
-	mines       uint16    // number of mines currently on the board
 	boardWidth  uint16    // width, in tiles
 	boardHeight uint16    // height, in tiles
 	flags       uint16    // how many flags are set
@@ -59,8 +58,7 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 		return errors.New("Y cannot be larger than the board height")
 	}
 	// add mines, if not already added
-	if g.mines != g.totalMines {
-		fmt.Println("Adding mines")
+	if 0 == len(g.grid) {
 		g.addMinesToGrid(x, y)
 		g.active = true
 	}
@@ -167,15 +165,15 @@ func (g *Game) Pretty() bytes.Buffer {
 // addMinesToGrid generates the initial mine grid
 func (g *Game) addMinesToGrid(ignoreX, ignoreY uint16) {
 	g.grid = make([]tile, g.boardHeight*g.boardWidth)
-	g.mines = 0
-	for g.mines < g.totalMines {
+	var mines uint16
+	for mines < g.totalMines {
 		x := uint16(rand.Intn(int(g.boardWidth)))
 		y := uint16(rand.Intn(int(g.boardHeight)))
 		if x == ignoreX && y == ignoreY {
 			continue
 		}
 		if set := g.setGridValue(9, x, y); set {
-			g.mines++
+			mines++
 		}
 	}
 	g.numberGrid()
