@@ -31,10 +31,18 @@ type Game struct {
 
 // NewGame starts a new game
 func NewGame(uid uuid.UUID, w, h, m uint16) (g *Game, err error) {
-	max := w * h
-	if (1 + max) < m {
-		err = errors.New(`mines exceed tiles`)
-		return nil, err
+	var maxW, maxH, maxM int
+	maxW = 250
+	maxH = 250
+	maxM = int(w)*int(h) - 2
+	if maxW < int(w) {
+		return nil, errors.New("width exceeds max")
+	}
+	if maxH < int(h) {
+		return nil, errors.New("height exceeds max")
+	}
+	if maxM < int(m) {
+		return nil, errors.New("mines exceed tiles")
 	}
 	g = &Game{
 		uid:         uid,
