@@ -37,7 +37,8 @@ func main() {
 		case `GET`:
 			switch p[0] {
 			case "":
-				w.WriteHeader(http.StatusMethodNotAllowed)
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintf(w, `{"games":%d}`, len(games))
 				return
 			default:
 				game, err := getGameByUUIDString(p[0])
