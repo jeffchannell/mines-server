@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,21 +20,47 @@ func init() {
 	games = make(map[uuid.UUID]*game.Game)
 }
 
+func logRequest(r *http.Request) {
+	log.Printf("%s %s\n", r.Method, r.URL.Path)
+}
+
 func main() {
 	// favicon, for browsers
 	http.HandleFunc(`/favicon.ico`, func(w http.ResponseWriter, r *http.Request) {
+		logRequest(r)
 		http.ServeFile(w, r, `static/favicon.ico`)
 	})
 	// no content in root
 	http.HandleFunc(`/`, func(w http.ResponseWriter, r *http.Request) {
+		logRequest(r)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	// handle /games routes
 	http.HandleFunc(`/games/`, func(w http.ResponseWriter, r *http.Request) {
+		logRequest(r)
+		// add cors headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Origin, X-GAME-UUID")
+		w.Header().Set("Access-Control-Max-Age", "86400")
 		// break up the path
 		p := strings.Split(strings.TrimPrefix(r.URL.Path, "/games/"), "/")
 		// switch by method first
 		switch r.Method {
+		case `OPTIONS`:
+			switch p[0] {
+			case "":
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				_, err := getGameByUUIDString(p[0])
+				if err != nil {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, err.Error())
+					return
+				}
+				w.WriteHeader(http.StatusNoContent)
+			}
+			return
 		case `GET`:
 			switch p[0] {
 			case "":
@@ -92,8 +119,9 @@ func main() {
 				// store the game in memory
 				games[uuid] = game
 				// send the new game uuid back to the client
-				w.Header().Set("X-Game-Uuid", uuid.String())
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
+				fmt.Fprintf(w, fmt.Sprintf(`{"uuid":"%s"}`, uuid.String()))
 				return
 			// update game by UUID
 			default:

@@ -27,6 +27,7 @@ type Game struct {
 	grid        []tile    // master grid
 	startTime   time.Time // time game started
 	endTime     time.Time // time game ended
+	won         bool      // game was won
 }
 
 // NewGame starts a new game
@@ -108,6 +109,7 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 		}
 		if total == len(g.grid) {
 			g.endTime = time.Now()
+			g.won = true
 		}
 	}
 	return
@@ -121,6 +123,9 @@ func (g *Game) String() string {
 	// show the end time
 	if !g.endTime.IsZero() {
 		b.WriteString(fmt.Sprintf("Game Ended: %v\n", g.endTime))
+		if g.won {
+			b.WriteString("Game Ended with a WIN\n")
+		}
 	}
 	// no turns taken yet
 	if 0 == len(g.grid) {
@@ -141,18 +146,8 @@ func (g *Game) String() string {
 	}
 	// start the first row number
 	b.WriteString("\n 0 ")
-	// loop the rows
 	for i := 0; i < len(g.grid); i++ {
-		if g.grid[i].flagged {
-			b.WriteString("!")
-		} else if !g.grid[i].clicked {
-			b.WriteString("?")
-		} else if 0 == g.grid[i].value {
-			b.WriteString(".")
-		} else {
-			b.WriteString(fmt.Sprintf("%d", g.grid[i].value))
-		}
-		b.WriteString(" ") // spacer
+		b.WriteString(fmt.Sprintf("%d ", g.grid[i].value))
 		// add newline and next row number
 		if 0 == ((i + 1) % w) {
 			b.WriteString("\n")
@@ -177,6 +172,9 @@ func (g *Game) JSON() string {
 	obj["width"] = g.boardWidth
 	if !g.endTime.IsZero() {
 		obj["end"] = g.endTime
+		if g.won {
+			obj["won"] = true
+		}
 	}
 	grid := make([]string, g.boardHeight*g.boardWidth)
 	for i := 0; i < len(g.grid); i++ {
@@ -303,16 +301,18 @@ func (g *Game) numberGrid() {
 	w = int(g.boardWidth)
 
 	// loop through every tile
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+	for x := 0; x < w; x++ {
+		for y := 0; y < h; y++ {
+			// tile index
+			idx := w*y + x
 			// skip mines
-			if 9 == g.grid[w*y+x].value {
+			if 9 == g.grid[idx].value {
 				continue
 			}
 			// total mines around this tile
 			var total uint8
-			for j := -1; j < 2; j++ {
-				for i := -1; i < 2; i++ {
+			for i := -1; i < 2; i++ {
+				for j := -1; j < 2; j++ {
 					// skip 0,0
 					if 0 == i && 0 == j {
 						continue
@@ -329,7 +329,7 @@ func (g *Game) numberGrid() {
 					}
 				}
 			}
-			g.grid[h*y+x].value = total
+			g.grid[idx].value = total
 		}
 	}
 }
