@@ -40,7 +40,7 @@ func main() {
 		logRequest(r)
 		// add cors headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Origin, X-GAME-UUID")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 		// break up the path
@@ -58,6 +58,21 @@ func main() {
 					fmt.Fprintf(w, err.Error())
 					return
 				}
+				w.WriteHeader(http.StatusNoContent)
+			}
+			return
+		case `DELETE`:
+			switch p[0] {
+			case "":
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			default:
+				game, err := getGameByUUIDString(p[0])
+				if err != nil {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, err.Error())
+					return
+				}
+				game.End(false)
 				w.WriteHeader(http.StatusNoContent)
 			}
 			return

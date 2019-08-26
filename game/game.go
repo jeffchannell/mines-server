@@ -108,11 +108,16 @@ func (g *Game) ClickTile(x, y uint16, flag bool) (err error) {
 			}
 		}
 		if total == len(g.grid) {
-			g.endTime = time.Now()
-			g.won = true
+			g.End(true)
 		}
 	}
 	return
+}
+
+// End the game
+func (g *Game) End(won bool) {
+	g.endTime = time.Now()
+	g.won = true
 }
 
 // String writes the board state to a string
@@ -170,6 +175,7 @@ func (g *Game) JSON() string {
 	obj["mines"] = g.totalMines
 	obj["height"] = g.boardHeight
 	obj["width"] = g.boardWidth
+	obj["flags"] = g.flags
 	if !g.endTime.IsZero() {
 		obj["end"] = g.endTime
 		if g.won {
@@ -179,7 +185,14 @@ func (g *Game) JSON() string {
 	grid := make([]string, g.boardHeight*g.boardWidth)
 	for i := 0; i < len(g.grid); i++ {
 		var val string
-		if g.grid[i].flagged {
+		// expose mines and false flags if the game is over and lost
+		if !g.won && !g.endTime.IsZero() && (9 == g.grid[i].value) {
+			if g.grid[i].flagged {
+				val = "X"
+			} else {
+				val = "9"
+			}
+		} else if g.grid[i].flagged {
 			val = "!"
 		} else if !g.grid[i].clicked {
 			val = "?"
@@ -310,26 +323,7 @@ func (g *Game) numberGrid() {
 				continue
 			}
 			// total mines around this tile
-			var total uint8
-			for i := -1; i < 2; i++ {
-				for j := -1; j < 2; j++ {
-					// skip 0,0
-					if 0 == i && 0 == j {
-						continue
-					}
-					// get new x,y coords
-					y2 := y + j
-					x2 := x + i
-					// skip out of bounds coords
-					if 0 > x2 || 0 > y2 || x2 >= w || y2 >= h {
-						continue
-					}
-					if 9 == g.grid[w*y2+x2].value {
-						total++
-					}
-				}
-			}
-			g.grid[idx].value = total
+			g.grid[idx].value = g.countMines(uint16(x), uint16(y))
 		}
 	}
 }
