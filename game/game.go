@@ -180,25 +180,31 @@ func (g *Game) JSON() string {
 		obj["end"] = g.endTime
 		if g.won {
 			obj["won"] = true
+			obj["flags"] = g.totalMines
 		}
 	}
 	grid := make([]string, g.boardHeight*g.boardWidth)
+	lost := !g.won && !g.endTime.IsZero()
 	for i := 0; i < len(g.grid); i++ {
 		var val string
-		// expose mines and false flags if the game is over and lost
-		if !g.won && !g.endTime.IsZero() && (9 == g.grid[i].value) {
-			if g.grid[i].flagged {
-				val = "X"
-			} else {
-				val = "9"
-			}
-		} else if g.grid[i].flagged {
+		isMine := 9 == g.grid[i].value
+		if lost && isMine && !g.grid[i].flagged {
+			// expose non-flagged mines if the game is over and lost
+			val = "9"
+		} else if lost && !isMine && g.grid[i].flagged {
+			// mark incorrect flags if the game is over and lost
+			val = "X"
+		} else if g.grid[i].flagged || (g.won && isMine) {
+			// mark flags or mines if the game was won
 			val = "!"
 		} else if !g.grid[i].clicked {
+			// mark unchecked tiles
 			val = "?"
 		} else if 0 == g.grid[i].value {
+			// leave empty open tiles with no label
 			val = ""
 		} else {
+			// label values 1-8
 			val = fmt.Sprintf("%d", g.grid[i].value)
 		}
 		grid[i] = val
