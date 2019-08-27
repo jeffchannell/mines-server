@@ -89,9 +89,24 @@ func main() {
 					fmt.Fprintf(w, err.Error())
 					return
 				}
+				var state string
+				if 1 < len(p) {
+					state, err = game.Turn(p[1])
+					if err != nil {
+						w.WriteHeader(http.StatusNotFound)
+						fmt.Fprintf(w, err.Error())
+						return
+					}
+				} else {
+					state, err = game.JSON()
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						fmt.Fprintf(w, err.Error())
+						return
+					}
+				}
 				w.Header().Set("Content-Type", "application/json")
-				s := game.JSON()
-				fmt.Fprintf(w, s)
+				fmt.Fprintf(w, state)
 				return
 			}
 		case `POST`:
@@ -185,10 +200,14 @@ func main() {
 					fmt.Fprintf(w, err.Error())
 					return
 				}
-
+				s, err := game.JSON()
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprintf(w, err.Error())
+					return
+				}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusAccepted)
-				s := game.JSON()
 				fmt.Fprintf(w, s)
 				return
 			}

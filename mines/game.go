@@ -52,7 +52,6 @@ type Game struct {
 	flags     uint16       // how many flags are set
 	startedAt time.Time    // time game started
 	endedAt   time.Time    // time game ended
-	grid      []tile       // master grid
 	won       bool         // game was won
 	history   map[int]turn // game history
 }
@@ -165,7 +164,32 @@ func (g *Game) End(won bool) {
 }
 
 // JSON writes the board state to a JSON string
-func (g *Game) JSON() string {
+func (g *Game) JSON() (string, error) {
+	turn := g.history[len(g.history)-1]
+	return g.convertTurnToString(turn)
+}
+
+// Turn writes a board state from history to a JSON string
+func (g *Game) Turn(uuidStr string) (string, error) {
+	uid, err := uuid.Parse(uuidStr)
+	if err != nil {
+		return "", err
+	}
+	var t turn
+	for i := 0; i < len(g.history); i++ {
+		if uid == g.history[i].uid {
+			return g.convertTurnToString(t)
+		}
+	}
+	return "", errors.New("invalid turn id")
+}
+
+// UUID of this game
+func (g *Game) UUID() uuid.UUID {
+	return g.uid
+}
+
+func (g *Game) convertTurnToString(t turn) (string, error) {
 	obj := make(map[string]interface{})
 	obj["started_at"] = g.startedAt
 	obj["mines"] = g.mines
@@ -179,44 +203,39 @@ func (g *Game) JSON() string {
 			obj["flags"] = g.mines
 		}
 	}
-	grid := make([]string, g.height*g.width)
+	tiles := make([]string, g.height*g.width)
 	lost := !g.won && !g.endedAt.IsZero()
-	turn := g.history[len(g.history)-1]
-	for i := 0; i < len(turn.tiles); i++ {
+	for i := 0; i < len(t.tiles); i++ {
 		var val string
-		isMine := 9 == turn.tiles[i].value
-		if lost && isMine && !turn.tiles[i].flagged {
+		isMine := 9 == t.tiles[i].value
+		if lost && isMine && !t.tiles[i].flagged {
 			// expose non-flagged mines if the game is over and lost
 			val = "9"
-		} else if lost && !isMine && turn.tiles[i].flagged {
+		} else if lost && !isMine && t.tiles[i].flagged {
 			// mark incorrect flags if the game is over and lost
 			val = "X"
-		} else if turn.tiles[i].flagged || (g.won && isMine) {
+		} else if t.tiles[i].flagged || (g.won && isMine) {
 			// mark flags or mines if the game was won
 			val = "!"
-		} else if !turn.tiles[i].clicked {
+		} else if !t.tiles[i].clicked {
 			// mark unchecked tiles
 			val = "?"
-		} else if 0 == turn.tiles[i].value {
+		} else if 0 == t.tiles[i].value {
 			// leave empty open tiles with no label
 			val = ""
 		} else {
 			// label values 1-8
-			val = fmt.Sprintf("%d", turn.tiles[i].value)
+			val = fmt.Sprintf("%d", t.tiles[i].value)
 		}
-		grid[i] = val
+		tiles[i] = val
 	}
-	obj["grid"] = grid
+	obj["turn_id"] = t.uid
+	obj["tiles"] = tiles
 	json, err := json.Marshal(obj)
 	if err != nil {
-		return err.Error()
+		return "", err
 	}
-	return string(json)
-}
-
-// UUID of this game
-func (g *Game) UUID() uuid.UUID {
-	return g.uid
+	return string(json), nil
 }
 
 func (g *Game) generateTiles(ignoreX, ignoreY uint16) []tile {
