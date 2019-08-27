@@ -9,15 +9,15 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jeffchannell/mineserver/game"
+	"github.com/jeffchannell/mineserver/mines"
 )
 
 var (
-	games map[uuid.UUID]*game.Game
+	games map[uuid.UUID]*mines.Game
 )
 
 func init() {
-	games = make(map[uuid.UUID]*game.Game)
+	games = make(map[uuid.UUID]*mines.Game)
 }
 
 func logRequest(r *http.Request) {
@@ -113,30 +113,24 @@ func main() {
 				if err != nil {
 					height = 12
 				}
-				mines, err := strconv.ParseUint(r.Form.Get("m"), 10, 16)
+				minecount, err := strconv.ParseUint(r.Form.Get("m"), 10, 16)
 				if err != nil {
-					mines = 20
-				}
-				// generate a new uuid
-				uuid, err := uuid.NewUUID()
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintf(w, err.Error())
-					return
+					minecount = 20
 				}
 				// generate a new game
-				game, err := game.NewGame(uuid, uint16(width), uint16(height), uint16(mines))
+				game, err := mines.NewGame(uint16(width), uint16(height), uint16(minecount))
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprintf(w, err.Error())
 					return
 				}
+				uid := game.UUID()
 				// store the game in memory
-				games[uuid] = game
+				games[uid] = game
 				// send the new game uuid back to the client
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
-				fmt.Fprintf(w, fmt.Sprintf(`{"uuid":"%s"}`, uuid.String()))
+				fmt.Fprintf(w, fmt.Sprintf(`{"uuid":"%s"}`, uid.String()))
 				return
 			// update game by UUID
 			default:
@@ -206,12 +200,12 @@ func main() {
 	http.ListenAndServe(`:55555`, nil)
 }
 
-func getGameByUUIDString(uuidStr string) (g *game.Game, err error) {
-	uuid, err := uuid.Parse(uuidStr)
+func getGameByUUIDString(uuidStr string) (g *mines.Game, err error) {
+	uid, err := uuid.Parse(uuidStr)
 	if err != nil {
 		return nil, err
 	}
-	if g, ok := games[uuid]; ok {
+	if g, ok := games[uid]; ok {
 		return g, nil
 	}
 	return nil, errors.New("invalid Game")
