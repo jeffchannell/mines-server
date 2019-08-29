@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jeffchannell/mineserver/mines"
+	"github.com/jeffchannell/mines-server/mines"
 )
 
 var (
