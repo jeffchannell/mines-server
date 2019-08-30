@@ -22,10 +22,6 @@ func init() {
 	games = make(map[uuid.UUID]*mines.Game)
 }
 
-func logRequest(r *http.Request) {
-	log.Printf("%s %s\n", r.Method, r.URL.Path)
-}
-
 func jsonError(w http.ResponseWriter, code int, err error) {
 	jsonErrorString(w, code, err.Error())
 }
@@ -46,17 +42,14 @@ func jsonErrorString(w http.ResponseWriter, code int, errStr string) {
 func main() {
 	// favicon, for browsers
 	http.HandleFunc(`/favicon.ico`, func(w http.ResponseWriter, r *http.Request) {
-		logRequest(r)
 		http.ServeFile(w, r, `static/favicon.ico`)
 	})
 	// no content in root
 	http.HandleFunc(`/`, func(w http.ResponseWriter, r *http.Request) {
-		logRequest(r)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	// handle /games routes
 	http.HandleFunc(`/games/`, func(w http.ResponseWriter, r *http.Request) {
-		logRequest(r)
 		// add cors headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS")
@@ -225,7 +218,7 @@ func main() {
 	portStr := os.Getenv("MINES_SERVER_PORT")
 	port, err := strconv.ParseInt(portStr, 10, 32)
 	if (err != nil) || (1024 > port) {
-		port = 55555
+		port = 8080
 	}
 	log.Printf("Starting server on port %v\n", port)
 	portStr = fmt.Sprintf(":%d", port)
