@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -220,8 +221,16 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+	// get port
+	portStr := os.Getenv("MINES_SERVER_PORT")
+	port, err := strconv.ParseInt(portStr, 10, 32)
+	if (err != nil) || (1024 > port) {
+		port = 55555
+	}
+	log.Printf("Starting server on port %v\n", port)
+	portStr = fmt.Sprintf(":%d", port)
 	// start webserver
-	http.ListenAndServe(`:55555`, nil)
+	http.ListenAndServe(portStr, nil)
 }
 
 func getGameByUUIDString(uuidStr string) (g *mines.Game, err error) {
