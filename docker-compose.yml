@@ -1,0 +1,12 @@
+version: "3"
+services:
+    goservice:
+        build: "."
+        ports:
+            - "8080"
+    nginx:
+        build: "./nginx"
+        ports:
+            - "55555:80"
+        depends_on:
+            - "goservice"
