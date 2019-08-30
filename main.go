@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -22,6 +23,23 @@ func init() {
 
 func logRequest(r *http.Request) {
 	log.Printf("%s %s\n", r.Method, r.URL.Path)
+}
+
+func jsonError(w http.ResponseWriter, code int, err error) {
+	jsonErrorString(w, code, err.Error())
+}
+
+func jsonErrorString(w http.ResponseWriter, code int, errStr string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	obj := make(map[string]string)
+	obj["error"] = errStr
+	json, e := json.Marshal(obj)
+	if e != nil {
+		log.Printf(e.Error())
+		return
+	}
+	fmt.Fprintf(w, string(json))
 }
 
 func main() {
@@ -54,8 +72,7 @@ func main() {
 			default:
 				_, err := getGameByUUIDString(p[0])
 				if err != nil {
-					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusNotFound, err)
 					return
 				}
 				w.WriteHeader(http.StatusNoContent)
@@ -68,8 +85,7 @@ func main() {
 			default:
 				game, err := getGameByUUIDString(p[0])
 				if err != nil {
-					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusNotFound, err)
 					return
 				}
 				game.End(false)
@@ -85,23 +101,20 @@ func main() {
 			default:
 				game, err := getGameByUUIDString(p[0])
 				if err != nil {
-					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusNotFound, err)
 					return
 				}
 				var state string
 				if 1 < len(p) {
 					state, err = game.Turn(p[1])
 					if err != nil {
-						w.WriteHeader(http.StatusNotFound)
-						fmt.Fprintf(w, err.Error())
+						jsonError(w, http.StatusNotFound, err)
 						return
 					}
 				} else {
 					state, err = game.JSON()
 					if err != nil {
-						w.WriteHeader(http.StatusInternalServerError)
-						fmt.Fprintf(w, err.Error())
+						jsonError(w, http.StatusInternalServerError, err)
 						return
 					}
 				}
@@ -116,8 +129,7 @@ func main() {
 				// read the contents of POST
 				err := r.ParseForm()
 				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusBadRequest, err)
 					return
 				}
 				width, err := strconv.ParseUint(r.Form.Get("w"), 10, 16)
@@ -135,8 +147,7 @@ func main() {
 				// generate a new game
 				game, err := mines.NewGame(uint16(width), uint16(height), uint16(minecount))
 				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusInternalServerError, err)
 					return
 				}
 				uid := game.UUID()
@@ -152,42 +163,38 @@ func main() {
 				// find the requested game
 				game, err := getGameByUUIDString(p[0])
 				if err != nil {
-					w.WriteHeader(http.StatusNotFound)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusNotFound, err)
 					return
 				}
 				// read the contents of POST
 				err = r.ParseForm()
 				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusBadRequest, err)
 					return
 				}
 				// get the POSTed X value
 				xString := r.Form.Get("x")
 				if "" == xString {
-					w.WriteHeader(http.StatusBadRequest)
+					jsonErrorString(w, http.StatusBadRequest, "x cannot be empty")
 					return
 				}
 				// convert X into uint
 				xUint, err := strconv.ParseUint(xString, 10, 16)
 				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusBadRequest, err)
 					return
 				}
 				x := uint16(xUint)
 				// get the POSTed Y value
 				yString := r.Form.Get("y")
 				if "" == yString {
-					w.WriteHeader(http.StatusBadRequest)
+					jsonErrorString(w, http.StatusBadRequest, "y cannot be empty")
 					return
 				}
 				// convert Y into uint
 				yUint, err := strconv.ParseUint(yString, 10, 16)
 				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusBadRequest, err)
 					return
 				}
 				y := uint16(yUint)
@@ -196,14 +203,12 @@ func main() {
 
 				err = game.ClickTile(x, y, flag)
 				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusBadRequest, err)
 					return
 				}
 				s, err := game.JSON()
 				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintf(w, err.Error())
+					jsonError(w, http.StatusInternalServerError, err)
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
